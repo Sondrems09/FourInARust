@@ -17,11 +17,10 @@ impl Board {
         }
     }
 
-    pub fn insert_piece(&mut self, col: usize, piece: Piece) {
+    pub fn insert_piece(&mut self, col: usize, piece: Piece) -> Result<(), &'static str> {
         // Recursiveley call the function again if the column is full
         if !self.cols[col].contains(&Piece::Empty) {
-            println!("Column is full");
-            self.insert_piece(col, piece);
+            return Err("Column is full");
         }
 
         let current_col = &mut self.cols[col];
@@ -33,6 +32,8 @@ impl Board {
             current_col.swap(i, i - 1);
             i -= 1;
         }
+
+        Ok(())
     }
 
     pub fn check_win(&self, col: usize) -> Option<Piece> {

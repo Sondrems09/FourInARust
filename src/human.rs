@@ -6,10 +6,14 @@ pub struct Human;
 
 impl Agent for Human {
     fn make_move(&self, board: &mut board::Board, piece: board::Piece) -> usize {
-        let col = Human::input("Enter the number of the column you want to insert a piece in");
+        loop {
+            let col = Human::input("Enter the number of the column you want to insert a piece in");
 
-        board.insert_piece(col, piece);
-        col
+            match board.insert_piece(col, piece) {
+                Ok(_) => return col,
+                Err(e) => println!("{e}")
+            }
+        }
     }
 }
 

@@ -10,7 +10,8 @@ enum Player {
     Human(Human),
     Engine(Engine),
 }
-impl Agent for Player { fn make_move(&self, board: &mut Board, piece: Piece) -> usize {
+impl Agent for Player {
+    fn make_move(&self, board: &mut Board, piece: Piece) -> usize {
         match self {
             Player::Human(h) => return h.make_move(board, piece),
             Player::Engine(e) => return e.make_move(board, piece),
@@ -52,7 +53,7 @@ impl Game {
                         self.board.display();
                         println!("X won!");
                         break;
-                    },
+                    }
                     Piece::O => {
                         self.board.display();
                         println!("O won!");
@@ -64,6 +65,5 @@ impl Game {
             }
             turn = 1 - turn;
         }
-
     }
 }
