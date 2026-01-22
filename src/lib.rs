@@ -63,6 +63,7 @@ impl Game {
                 },
                 None => (),
             }
+
             turn = 1 - turn;
         }
     }

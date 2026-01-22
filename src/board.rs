@@ -71,7 +71,7 @@ impl Board {
             }
         }
 
-        let (diagonal1, diagonal2) = self.get_diagonals(last_piece_x, last_piece_y);
+        let (diagonal1, diagonal2) = self.get_diagonals_of_last_piece(last_piece_x, last_piece_y);
 
         if diagonal1.len() >= 4 {
             for window in diagonal1.windows(4) {
@@ -95,54 +95,47 @@ impl Board {
         None
     }
 
-    fn get_diagonals(&self, last_x: usize, last_y: usize) -> (Vec<Piece>, Vec<Piece>) {
-        let x_right = 6 - last_x; // Six starting from 0 is the lenght of the row
-        let x_left = 6 - x_right;
+    fn get_diagonals_of_last_piece(
+        &self,
+        last_x: usize,
+        last_y: usize,
+    ) -> (Vec<Piece>, Vec<Piece>) {
+        let cols = self.cols.len();
+        let rows = self.cols[0].len();
 
-        let y_above = 5 - last_y; // Same principal as above, five is the legth of each column
-        let y_below = 5 - y_above;
-
-        // Getting the first diagonal
-        // Find the smallest value to the "left" and the smallest value to the "right"
-        let smallest_left = x_left.min(y_below);
-        let smallest_right = x_right.min(y_above);
-
-        // Make a square
-        let side_len = smallest_left + smallest_right + 1;
-
-        // Find the starting x and y
-        let mut x = last_x - smallest_left;
-        let mut y = last_y - smallest_left;
-
-        // Find the values
-        let mut diagonal1 = Vec::new();
-        for _ in 0..side_len {
-            diagonal1.push(self.cols[x][y]);
+        // Diagonal /
+        let mut diag1 = Vec::new();
+        // Step backwards (down-left)
+        let mut x = last_x as isize;
+        let mut y = last_y as isize;
+        while x > 0 && y > 0 {
+            x -= 1;
+            y -= 1;
+        }
+        // Step forward (up-right)
+        while x < cols as isize && y < rows as isize {
+            diag1.push(self.cols[x as usize][y as usize]);
             x += 1;
             y += 1;
         }
 
-        // Get the second diagonal
-        // Here we need to do some shifting around of variables
-        let smallest_left = x_left.min(y_above);
-        let smallest_right = x_right.min(y_below);
-
-        // Make a square
-        let side_len = smallest_left + smallest_right + 1;
-
-        // Find the starting x and y
-        let mut x = last_x - smallest_left;
-        let mut y = last_y + smallest_left;
-
-        // Find the values
-        let mut diagonal2 = Vec::new();
-        for _ in 0..side_len {
-            diagonal2.push(self.cols[x][y]);
+        // Diagonal \
+        let mut diag2 = Vec::new();
+        // Step backwards (up-left)
+        let mut x = last_x as isize;
+        let mut y = last_y as isize;
+        while x > 0 && y < (rows as isize - 1) {
+            x -= 1;
+            y += 1;
+        }
+        // Step forward (up-right)
+        while x < cols as isize && y >= 0 {
+            diag2.push(self.cols[x as usize][y as usize]);
             x += 1;
-            y = y.saturating_sub(1); // Saturating sub to avoid an underflow error
+            y -= 1;
         }
 
-        (diagonal1, diagonal2)
+        (diag1, diag2)
     }
 
     pub fn display(&self) {
@@ -163,6 +156,84 @@ impl Board {
             println!()
         }
     }
+
+    pub fn diagonals(&self) -> (Vec<Vec<Piece>>, Vec<Vec<Piece>>) {
+        let cols = self.cols.len();
+        let rows = self.cols[0].len();
+
+        // Diagonals /
+        let mut diagonals_up = Vec::new();
+
+        for i in 0..cols - 1 {
+            diagonals_up.push(Vec::new());
+            let mut x = i;
+            let mut y = 2;
+
+            // Walk back (down-left)
+            while x > 0 && y > 0 {
+                x -= 1;
+                y -= 1;
+            }
+
+            // Walk forwards (up-right)
+            while x < cols && y < rows {
+                diagonals_up[i].push(self.cols[x][y]);
+                x += 1;
+                y += 1;
+            }
+        }
+
+        // Diagonals \
+        let mut diagonals_down = Vec::new();
+
+        for i in 0..cols - 1 {
+            diagonals_down.push(Vec::new());
+
+            let mut x = i as isize;
+            let mut y = 3 as isize;
+
+            // Walk back (up-left)
+            while x > 0 && y < (rows as isize) - 1 {
+                x -= 1;
+                y += 1;
+            }
+
+            // Walk forward (down-right)
+            while x < cols as isize && y >= 0 {
+                diagonals_down[i].push(self.cols[x as usize][y as usize]);
+                x += 1;
+                y -= 1;
+            }
+        }
+
+        (diagonals_up, diagonals_down)
+    }
+
+    pub fn rows(&self) -> Vec<Vec<Piece>> {
+        let mut rows = Vec::new();
+        
+        for y in 0..6 {
+            rows.push(Vec::new());
+            for x in 0..7 {
+                rows[y].push(self.cols[x][y]);
+            }
+        }
+
+        rows
+    }
+
+    pub fn cols(&self) -> Vec<Vec<Piece>> {
+        let mut cols = Vec::new();
+
+        for x in 0..7 {
+            cols.push(Vec::new());
+            for y in 0..6 {
+                cols[x].push(self.cols[x][y]);
+            }
+        }
+
+        cols
+    }
 }
 
 #[cfg(test)]
@@ -173,7 +244,7 @@ mod board_tests {
     fn insert_piece_works() {
         let mut board = Board::new();
 
-        board.insert_piece(0, Piece::O);
+        board.insert_piece(0, Piece::O).unwrap();
 
         let board2 = Board {
             cols: [
@@ -302,7 +373,7 @@ mod board_tests {
             ],
         };
 
-        let diagonal1 = board.get_diagonals(0, 0);
+        let diagonal1 = board.get_diagonals_of_last_piece(0, 0);
 
         assert_eq!(
             diagonal1,

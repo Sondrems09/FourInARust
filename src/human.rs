@@ -11,7 +11,7 @@ impl Agent for Human {
 
             match board.insert_piece(col, piece) {
                 Ok(_) => return col,
-                Err(e) => println!("{e}")
+                Err(e) => println!("{e}"),
             }
         }
     }
