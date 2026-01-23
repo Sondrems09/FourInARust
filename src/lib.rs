@@ -6,10 +6,12 @@ use board::{Board, Piece};
 use engine::Engine;
 use human::Human;
 
+#[allow(unused)]
 enum Player {
     Human(Human),
     Engine(Engine),
 }
+
 impl Agent for Player {
     fn make_move(&self, board: &mut Board, piece: Piece) {
         match self {
@@ -29,6 +31,12 @@ pub struct Game {
     board: Board,
 }
 
+impl Default for Game {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Game {
     pub fn new() -> Game {
         Game {
@@ -46,6 +54,12 @@ impl Game {
             let current = if piece == Piece::O { &self.o } else { &self.x };
 
             current.make_move(&mut self.board, piece);
+
+            if self.board.is_full() {
+                self.board.display();
+                println!("Board is full, its a draw");
+                break;
+            }
 
             if let Some(piece) = self.board.check_win() {
                 match piece {

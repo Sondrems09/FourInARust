@@ -11,6 +11,12 @@ pub enum Piece {
     Empty,
 }
 
+impl Default for Board {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Board {
     pub fn new() -> Board {
         Board {
@@ -32,7 +38,7 @@ impl Board {
         while i > 0 && current_col[i - 1] == Piece::Empty {
             current_col.swap(i, i - 1);
             i -= 1;
-        };
+        }
 
         self.last_move = col;
 
@@ -214,7 +220,7 @@ impl Board {
 
     pub fn rows(&self) -> Vec<Vec<Piece>> {
         let mut rows = Vec::new();
-        
+
         for y in 0..6 {
             rows.push(Vec::new());
             for x in 0..7 {
@@ -468,9 +474,10 @@ mod board_tests {
                     Piece::Empty,
                 ],
             ],
+            last_move: 0,
         };
 
-        let win = board.check_win(0);
+        let win = board.check_win();
         assert_eq!(win, Some(Piece::X));
     }
 }
