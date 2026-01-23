@@ -5,12 +5,12 @@ use crate::{Agent, board};
 pub struct Human;
 
 impl Agent for Human {
-    fn make_move(&self, board: &mut board::Board, piece: board::Piece) -> usize {
+    fn make_move(&self, board: &mut board::Board, piece: board::Piece) {
         loop {
             let col = Human::input("Enter the number of the column you want to insert a piece in");
 
             match board.insert_piece(col, piece) {
-                Ok(_) => return col,
+                Ok(_) => break,
                 Err(e) => println!("{e}"),
             }
         }

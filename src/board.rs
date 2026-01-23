@@ -1,6 +1,7 @@
 #[derive(Clone, Debug)]
 pub struct Board {
     cols: [[Piece; 6]; 7],
+    last_move: usize,
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -14,11 +15,11 @@ impl Board {
     pub fn new() -> Board {
         Board {
             cols: [[Piece::Empty; 6]; 7],
+            last_move: 0,
         }
     }
 
     pub fn insert_piece(&mut self, col: usize, piece: Piece) -> Result<(), &'static str> {
-        // Recursiveley call the function again if the column is full
         if !self.cols[col].contains(&Piece::Empty) {
             return Err("Column is full");
         }
@@ -31,14 +32,16 @@ impl Board {
         while i > 0 && current_col[i - 1] == Piece::Empty {
             current_col.swap(i, i - 1);
             i -= 1;
-        }
+        };
+
+        self.last_move = col;
 
         Ok(())
     }
 
-    pub fn check_win(&self, col: usize) -> Option<Piece> {
+    pub fn check_win(&self) -> Option<Piece> {
         // Check the column for four in a row
-        for window in self.cols[col].windows(4) {
+        for window in self.cols[self.last_move].windows(4) {
             if window.iter().all(|&x| x == Piece::X) {
                 return Some(Piece::X);
             } else if window.iter().all(|&x| x == Piece::O) {
@@ -48,10 +51,10 @@ impl Board {
 
         // Find the x and y of the last piece inserted
         let mut last_piece_y = 5;
-        while self.cols[col][last_piece_y] == Piece::Empty {
+        while self.cols[self.last_move][last_piece_y] == Piece::Empty {
             last_piece_y -= 1;
         }
-        let last_piece_x = col;
+        let last_piece_x = self.last_move;
 
         // Get the three pieces on each side of the last piece inserted
         let mut row: Vec<Piece> = Vec::new();
@@ -190,7 +193,7 @@ impl Board {
             diagonals_down.push(Vec::new());
 
             let mut x = i as isize;
-            let mut y = 3 as isize;
+            let mut y = 3;
 
             // Walk back (up-left)
             while x > 0 && y < (rows as isize) - 1 {
@@ -233,6 +236,17 @@ impl Board {
         }
 
         cols
+    }
+    pub fn is_full(&self) -> bool {
+        for col in self.cols() {
+            for cell in col {
+                match cell {
+                    Piece::Empty => return false,
+                    _ => continue,
+                }
+            }
+        }
+        true
     }
 }
 
@@ -305,6 +319,7 @@ mod board_tests {
                     Piece::Empty,
                 ],
             ],
+            last_move: 0,
         };
 
         assert_eq!(board.cols, board2.cols);
@@ -371,6 +386,7 @@ mod board_tests {
                     Piece::Empty,
                 ],
             ],
+            last_move: 0,
         };
 
         let diagonal1 = board.get_diagonals_of_last_piece(0, 0);

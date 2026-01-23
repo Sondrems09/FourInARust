@@ -11,16 +11,16 @@ enum Player {
     Engine(Engine),
 }
 impl Agent for Player {
-    fn make_move(&self, board: &mut Board, piece: Piece) -> usize {
+    fn make_move(&self, board: &mut Board, piece: Piece) {
         match self {
-            Player::Human(h) => return h.make_move(board, piece),
-            Player::Engine(e) => return e.make_move(board, piece),
+            Player::Human(h) => h.make_move(board, piece),
+            Player::Engine(e) => e.make_move(board, piece),
         }
     }
 }
 
 trait Agent {
-    fn make_move(&self, board: &mut Board, piece: Piece) -> usize;
+    fn make_move(&self, board: &mut Board, piece: Piece);
 }
 
 pub struct Game {
@@ -45,10 +45,10 @@ impl Game {
             let piece = if turn == 0 { Piece::O } else { Piece::X };
             let current = if piece == Piece::O { &self.o } else { &self.x };
 
-            let col = current.make_move(&mut self.board, piece);
+            current.make_move(&mut self.board, piece);
 
-            match self.board.check_win(col) {
-                Some(piece) => match piece {
+            if let Some(piece) = self.board.check_win() {
+                match piece {
                     Piece::X => {
                         self.board.display();
                         println!("X won!");
@@ -60,8 +60,7 @@ impl Game {
                         break;
                     }
                     _ => panic!("Invalid winner"),
-                },
-                None => (),
+                }
             }
 
             turn = 1 - turn;
