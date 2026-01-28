@@ -1,7 +1,7 @@
 #[derive(Clone, Debug)]
 pub struct Board {
-    cols: [[Piece; 6]; 7],
-    last_move: usize,
+    pub cols: [[Piece; 6]; 7],
+    pub last_move: usize,
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -57,8 +57,8 @@ impl Board {
 
         // Find the x and y of the last piece inserted
         let mut last_piece_y = 5;
-        while self.cols[self.last_move][last_piece_y] == Piece::Empty {
-            last_piece_y -= 1;
+        while self.cols[self.last_move][last_piece_y] == Piece::Empty && last_piece_y != 0 {
+            last_piece_y = last_piece_y.saturating_sub(1);
         }
         let last_piece_x = self.last_move;
 
@@ -148,7 +148,7 @@ impl Board {
     }
 
     pub fn display(&self) {
-        clearscreen::clear().expect("failed to clear screen");
+        // clearscreen::clear().expect("failed to clear screen");
 
         for x in 1..=7 {
             print!("{x} ");

@@ -6,7 +6,6 @@ use board::{Board, Piece};
 use engine::Engine;
 use human::Human;
 
-#[allow(unused)]
 enum Player {
     Human(Human),
     Engine(Engine),
@@ -41,7 +40,7 @@ impl Game {
     pub fn new() -> Game {
         Game {
             x: Player::Human(Human),
-            o: Player::Human(Human),
+            o: Player::Engine(Engine),
             board: Board::new(),
         }
     }
