@@ -79,4 +79,9 @@ impl Game {
             turn = 1 - turn;
         }
     }
+
+    pub fn run_test(&mut self) {
+        self.board.display();
+        engine::Engine::eval(&self.board, Piece::X);
+    }
 }

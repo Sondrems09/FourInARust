@@ -20,7 +20,7 @@ impl Agent for Engine {
     fn make_move(&self, board: &mut board::Board, piece: board::Piece) {
         let mut board_clone = board.clone();
         println!("Chosing a move...");
-        let game_state = self.minimax(&mut board_clone, piece, 7);
+        let game_state = self.minimax(&mut board_clone, piece, 6);
         println!("Eval: {}", game_state.eval);
 
         board
@@ -36,11 +36,17 @@ impl Engine {
         if let Some(piece) = board.check_win() {
             match piece {
                 board::Piece::O => {
-                    let game_state = GameState { eval: 1_000_000_000, best_move: 0 };
+                    let game_state = GameState {
+                        eval: 1_000_000_000,
+                        best_move: 0,
+                    };
                     return game_state;
                 }
                 board::Piece::X => {
-                    let game_state = GameState { eval: -1_000_000_000, best_move: 0};
+                    let game_state = GameState {
+                        eval: -1_000_000_000,
+                        best_move: 0,
+                    };
                     return game_state;
                 }
                 _ => (),
@@ -48,7 +54,10 @@ impl Engine {
         }
 
         if board.is_full() || depth == 0 {
-            let game_state = GameState { eval: Engine::eval(board), best_move: 0};
+            let game_state = GameState {
+                eval: Engine::eval(board, piece),
+                best_move: 0,
+            };
             return game_state;
         }
 
@@ -57,7 +66,7 @@ impl Engine {
         let cols = board.cols();
         for i in 0..cols.len() {
             if cols[i].contains(&board::Piece::Empty) {
-                empty_cols.push(i); 
+                empty_cols.push(i);
             }
         }
 
@@ -65,24 +74,24 @@ impl Engine {
 
         for i in empty_cols {
             let mut current_test_play = GameState::new();
-            current_test_play.best_move = i; 
+            current_test_play.best_move = i;
 
             if board.insert_piece(i, piece).is_err() {
                 continue;
             }
 
             if piece == board::Piece::X {
-                let result = self.minimax(board, board::Piece::O, depth-1);
+                let result = self.minimax(board, board::Piece::O, depth - 1);
                 current_test_play.eval = result.eval;
             } else {
-                let result = self.minimax(board, board::Piece::X, depth-1);
+                let result = self.minimax(board, board::Piece::X, depth - 1);
                 current_test_play.eval = result.eval
             }
-            
+
             board.undo_move(i);
 
             all_plays.push(current_test_play);
-        };
+        }
 
         let mut best_play = GameState::new();
 
@@ -93,7 +102,7 @@ impl Engine {
                     best_eval = play.eval;
                     best_play = play;
                 }
-            } 
+            }
         } else {
             let mut best_eval = isize::MAX;
             for play in all_plays {
@@ -106,49 +115,46 @@ impl Engine {
         best_play
     }
 
-    fn eval(board: &board::Board) -> isize {
+    pub fn eval(board: &board::Board, piece: board::Piece) -> isize {
+        #[allow(unused_mut)]
         let mut eval: isize = 0;
 
         let (diagonals_up, diagonals_down) = board.diagonals();
         let cols = board.cols();
         let rows = board.rows();
 
-        let lines_collections = vec![diagonals_up, diagonals_down, cols, rows];
+        let lines = diagonals_up
+            .into_iter()
+            .chain(diagonals_down)
+            .chain(cols)
+            .chain(rows);
 
-        for lines in lines_collections {
-            for line in lines {
-                for i in 1..4 {
-                    for (n, window) in line.windows(i).enumerate() {
-                        if window.iter().all(|&x| x == board::Piece::O) {
-                            let after = if n + i < line.len() { line[n + i] } else { board::Piece::X };
-                            let before = if n > 0 { line[n - 1] } else { board::Piece::X };
-                            
-                            if after == board::Piece::X || before == board::Piece::X {
-                                if after == board::Piece::X && before == board::Piece::X {
-                                    eval += 0;
-                                } else { 
-                                    eval += (10_isize.pow(i as u32))/2
-                                }
-                            } else {
-                                eval += 10_isize.pow(i as u32);
-                            }
-                        }
-                        if window.iter().all(|&x| x == board::Piece::X) {
-                            let after = if n + i < line.len() { line[n + i] } else { board::Piece::O };
-                            let before = if n > 0 { line[n - 1] } else { board::Piece::O };
-                            
-                            if after == board::Piece::O || before == board::Piece::O {
-                                if after == board::Piece::O && before == board::Piece::O {
-                                    eval -= 0;
-                                } else {
-                                    eval -= (10_isize.pow(i as u32))/2
-                                }
-                            } else {
-                                eval -= 10_isize.pow(i as u32);
-                            }
-                        }
-                    }
-                }
+        for line in lines {
+            match piece {
+                board::Piece::O => eval += Engine::evaluate_line(&line, piece),
+                board::Piece::X => eval -= Engine::evaluate_line(&line, piece),
+                _ => panic!("Invalid player"),
+            }
+        }
+
+        eval
+    }
+
+    fn evaluate_line(line: &[board::Piece], piece: board::Piece) -> isize {
+        let mut eval: isize = 0;
+
+        for window in line.windows(4) {
+            let count_pieces = window.iter().filter(|&&p| p == piece).count();
+            let count_empty = window.iter().filter(|&&p| p == board::Piece::Empty).count();
+
+            if count_pieces + count_empty == 4 {
+                // window has only your own pieces and empty spaces
+                // evaled exponentially with how many pieces you have filled
+                eval += 10_isize.pow(count_pieces as u32)
+            } else {
+                // window is blocked, evaled to 0
+                eval += 0;
+                continue;
             }
         }
 
