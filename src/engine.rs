@@ -19,12 +19,15 @@ impl GameState {
 impl Agent for Engine {
     fn make_move(&self, board: &mut board::Board, piece: board::Piece) {
         let mut board_clone = board.clone();
-        let game_state = self.minimax(&mut board_clone, piece, 10);
+        println!("Chosing a move...");
+        let game_state = self.minimax(&mut board_clone, piece, 7);
         println!("Eval: {}", game_state.eval);
 
         board
             .insert_piece(game_state.best_move, piece)
             .expect("failed to make a move");
+
+        board.eval = game_state.eval;
     }
 }
 
@@ -64,7 +67,7 @@ impl Engine {
             let mut current_test_play = GameState::new();
             current_test_play.best_move = i; 
 
-            if let Err(_) = board.insert_piece(i, piece) {
+            if board.insert_piece(i, piece).is_err() {
                 continue;
             }
 
@@ -75,14 +78,8 @@ impl Engine {
                 let result = self.minimax(board, board::Piece::X, depth-1);
                 current_test_play.eval = result.eval
             }
-
-            // find the last inserted piece
-            let mut  i = 5;
-            while board.cols[board.last_move][i] == board::Piece::Empty && i != 0 {
-                i -= 1;
-            }
-
-            board.cols[board.last_move][i] = board::Piece::Empty;
+            
+            board.undo_move(i);
 
             all_plays.push(current_test_play);
         };
@@ -114,19 +111,41 @@ impl Engine {
 
         let (diagonals_up, diagonals_down) = board.diagonals();
         let cols = board.cols();
-        let rows = board.cols();
+        let rows = board.rows();
 
         let lines_collections = vec![diagonals_up, diagonals_down, cols, rows];
 
         for lines in lines_collections {
             for line in lines {
                 for i in 1..4 {
-                    for window in line.windows(i) {
+                    for (n, window) in line.windows(i).enumerate() {
                         if window.iter().all(|&x| x == board::Piece::O) {
-                            eval += 10_isize.pow(i as u32);
+                            let after = if n + i < line.len() { line[n + i] } else { board::Piece::X };
+                            let before = if n > 0 { line[n - 1] } else { board::Piece::X };
+                            
+                            if after == board::Piece::X || before == board::Piece::X {
+                                if after == board::Piece::X && before == board::Piece::X {
+                                    eval += 0;
+                                } else { 
+                                    eval += (10_isize.pow(i as u32))/2
+                                }
+                            } else {
+                                eval += 10_isize.pow(i as u32);
+                            }
                         }
                         if window.iter().all(|&x| x == board::Piece::X) {
-                            eval -= 10_isize.pow(i as u32);
+                            let after = if n + i < line.len() { line[n + i] } else { board::Piece::O };
+                            let before = if n > 0 { line[n - 1] } else { board::Piece::O };
+                            
+                            if after == board::Piece::O || before == board::Piece::O {
+                                if after == board::Piece::O && before == board::Piece::O {
+                                    eval -= 0;
+                                } else {
+                                    eval -= (10_isize.pow(i as u32))/2
+                                }
+                            } else {
+                                eval -= 10_isize.pow(i as u32);
+                            }
                         }
                     }
                 }

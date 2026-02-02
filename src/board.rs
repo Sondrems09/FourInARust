@@ -1,7 +1,8 @@
 #[derive(Clone, Debug)]
 pub struct Board {
-    pub cols: [[Piece; 6]; 7],
+    cols: [[Piece; 6]; 7],
     pub last_move: usize,
+    pub eval: isize,
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -22,6 +23,7 @@ impl Board {
         Board {
             cols: [[Piece::Empty; 6]; 7],
             last_move: 0,
+            eval: 0,
         }
     }
 
@@ -43,6 +45,15 @@ impl Board {
         self.last_move = col;
 
         Ok(())
+    }
+
+    pub fn undo_move(&mut self, col: usize) {
+        for row in (0..self.cols[col].len()).rev() {
+            if self.cols[col][row] != Piece::Empty {
+                self.cols[col][row] = Piece::Empty;
+                break;
+            }
+        }
     }
 
     pub fn check_win(&self) -> Option<Piece> {
@@ -148,7 +159,10 @@ impl Board {
     }
 
     pub fn display(&self) {
-        // clearscreen::clear().expect("failed to clear screen");
+        clearscreen::clear().expect("failed to clear screen");
+
+        println!("Eval: {}", self.eval);
+        println!();
 
         for x in 1..=7 {
             print!("{x} ");
@@ -164,6 +178,7 @@ impl Board {
             }
             println!()
         }
+        println!();
     }
 
     pub fn diagonals(&self) -> (Vec<Vec<Piece>>, Vec<Vec<Piece>>) {
@@ -326,6 +341,7 @@ mod board_tests {
                 ],
             ],
             last_move: 0,
+            eval: 0,
         };
 
         assert_eq!(board.cols, board2.cols);
@@ -393,6 +409,7 @@ mod board_tests {
                 ],
             ],
             last_move: 0,
+            eval: 0,
         };
 
         let diagonal1 = board.get_diagonals_of_last_piece(0, 0);
@@ -475,6 +492,7 @@ mod board_tests {
                 ],
             ],
             last_move: 0,
+            eval: 0,
         };
 
         let win = board.check_win();
