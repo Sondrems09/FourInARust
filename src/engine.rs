@@ -20,7 +20,7 @@ impl Agent for Engine {
     fn make_move(&self, board: &mut board::Board, piece: board::Piece) {
         let mut board_clone = board.clone();
         println!("Chosing a move...");
-        let game_state = self.minimax(&mut board_clone, piece, 6);
+        let game_state = self.negmax(&mut board_clone, piece, 6);
         println!("Eval: {}", game_state.eval);
 
         board
@@ -32,33 +32,17 @@ impl Agent for Engine {
 }
 
 impl Engine {
-    fn minimax(&self, board: &mut board::Board, piece: board::Piece, depth: u32) -> GameState {
-        if let Some(piece) = board.check_win() {
-            match piece {
-                board::Piece::O => {
-                    let game_state = GameState {
-                        eval: 1_000_000_000,
-                        best_move: 0,
-                    };
-                    return game_state;
-                }
-                board::Piece::X => {
-                    let game_state = GameState {
-                        eval: -1_000_000_000,
-                        best_move: 0,
-                    };
-                    return game_state;
-                }
-                _ => (),
-            }
-        }
-
-        if board.is_full() || depth == 0 {
-            let game_state = GameState {
-                eval: Engine::eval(board, piece),
-                best_move: 0,
+    fn negmax(&self, board: &mut board::Board, piece: board::Piece, depth: u32) -> GameState {
+        if let Some(result) = board.is_terminal() {
+            match result {
+                board::Piece::O => return GameState { eval: 100_000_000, best_move: 0 },
+                board::Piece::X => return GameState { eval: -100_000_000, best_move: 0 },
+                board::Piece::Empty => return GameState { eval: 0, best_move: 0 },
             };
-            return game_state;
+        }       
+
+        if depth == 0 {
+            return GameState { eval: Engine::eval(board, piece), best_move: 0 };
         }
 
         // Get index of all non-full columns (possible moves)
@@ -81,10 +65,10 @@ impl Engine {
             }
 
             if piece == board::Piece::X {
-                let result = self.minimax(board, board::Piece::O, depth - 1);
+                let result = self.negmax(board, board::Piece::O, depth - 1);
                 current_test_play.eval = result.eval;
             } else {
-                let result = self.minimax(board, board::Piece::X, depth - 1);
+                let result = self.negmax(board, board::Piece::X, depth - 1);
                 current_test_play.eval = result.eval
             }
 
@@ -116,7 +100,6 @@ impl Engine {
     }
 
     pub fn eval(board: &board::Board, piece: board::Piece) -> isize {
-        #[allow(unused_mut)]
         let mut eval: isize = 0;
 
         let (diagonals_up, diagonals_down) = board.diagonals();

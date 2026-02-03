@@ -115,6 +115,16 @@ impl Board {
         None
     }
 
+    pub fn is_terminal(&self) -> Option<Piece> {
+        if let Some(winner) = self.check_win() {
+            Some(winner)
+        } else if self.is_full() {
+            Some(Piece::Empty)
+        } else {
+            None
+        }
+    }
+
     fn get_diagonals_of_last_piece(
         &self,
         last_x: usize,
