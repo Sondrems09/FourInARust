@@ -7,6 +7,7 @@ struct GameState {
     best_move: usize,
 }
 
+#[allow(unused)]
 impl GameState {
     pub fn new() -> GameState {
         GameState {
@@ -20,7 +21,7 @@ impl Agent for Engine {
     fn make_move(&self, board: &mut board::Board, piece: board::Piece) {
         let mut board_clone = board.clone();
         println!("Chosing a move...");
-        let game_state = self.negmax(&mut board_clone, piece, 6);
+        let game_state = self.negmax(&mut board_clone, piece, -100_000_000_000, 100_000_000_000, 10);
         println!("Eval: {}", game_state.eval);
 
         board
@@ -32,75 +33,101 @@ impl Agent for Engine {
 }
 
 impl Engine {
-    fn negmax(&self, board: &mut board::Board, piece: board::Piece, depth: u32) -> GameState {
+    fn negmax(
+        &self,
+        board: &mut board::Board,
+        piece: board::Piece,
+        mut alpha: isize,
+        beta: isize,
+        depth: u32,
+    ) -> GameState {
+
         if let Some(result) = board.is_terminal() {
             match result {
-                board::Piece::O => return GameState { eval: 100_000_000, best_move: 0 },
-                board::Piece::X => return GameState { eval: -100_000_000, best_move: 0 },
-                board::Piece::Empty => return GameState { eval: 0, best_move: 0 },
+                board::Piece::O => {
+                    return GameState {
+                        eval: 100_000_000 + depth as isize,
+                        best_move: 0,
+                    };
+                }
+                board::Piece::X => {
+                    return GameState {
+                        eval: -100_000_000 - depth as isize,
+                        best_move: 0,
+                    };
+                }
+                board::Piece::Empty => {
+                    return GameState {
+                        eval: 0,
+                        best_move: 0,
+                    };
+                }
             };
-        }       
+        }
 
         if depth == 0 {
-            return GameState { eval: Engine::eval(board, piece), best_move: 0 };
+            return GameState {
+                eval: Engine::eval(board, piece),
+                best_move: 0,
+            };
         }
 
-        // Get index of all non-full columns (possible moves)
-        let mut empty_cols = Vec::new();
-        let cols = board.cols();
-        for i in 0..cols.len() {
-            if cols[i].contains(&board::Piece::Empty) {
-                empty_cols.push(i);
-            }
-        }
+        let moves = Engine::order_moves(board, piece);
 
-        let mut all_plays: Vec<GameState> = Vec::new();
+        let mut best_eval = isize::MIN;
+        let mut best_move = 0;
 
-        for i in empty_cols {
-            let mut current_test_play = GameState::new();
-            current_test_play.best_move = i;
-
-            if board.insert_piece(i, piece).is_err() {
+        for current_move in moves {
+            if board.insert_piece(current_move, piece).is_err() {
                 continue;
             }
+            let child = self.negmax(board, piece.opponent(), -beta, -alpha, depth - 1);
+            let score = -child.eval;
 
-            if piece == board::Piece::X {
-                let result = self.negmax(board, board::Piece::O, depth - 1);
-                current_test_play.eval = result.eval;
-            } else {
-                let result = self.negmax(board, board::Piece::X, depth - 1);
-                current_test_play.eval = result.eval
+            board.undo_move(current_move);
+
+            if score > best_eval {
+                best_eval = score;
+                best_move = current_move;
             }
 
-            board.undo_move(i);
-
-            all_plays.push(current_test_play);
-        }
-
-        let mut best_play = GameState::new();
-
-        if piece == board::Piece::O {
-            let mut best_eval = isize::MIN;
-            for play in all_plays {
-                if play.eval > best_eval {
-                    best_eval = play.eval;
-                    best_play = play;
-                }
-            }
-        } else {
-            let mut best_eval = isize::MAX;
-            for play in all_plays {
-                if play.eval < best_eval {
-                    best_eval = play.eval;
-                    best_play = play;
-                }
+            alpha = alpha.max(best_eval);
+            if alpha >= beta {
+                break;
             }
         }
-        best_play
+
+        GameState {
+            eval: best_eval,
+            best_move: best_move,
+        }
+    }
+
+    pub fn order_moves(board: &mut board::Board, piece: board::Piece) -> Vec<usize> {
+        let mut moves = board.get_moves();
+        let center = 4;
+
+        moves.sort_by_key(|&col| {
+            let mut score = 0;
+            if board.creates_three_in_a_row(col, piece) { score += 1000 }
+            score += 100 - (col as isize - center as isize).abs() as isize;
+            -score
+        }
+        );
+
+        moves
     }
 
     pub fn eval(board: &board::Board, piece: board::Piece) -> isize {
         let mut eval: isize = 0;
+
+        if let Some(result) = board.check_win() {
+            return match result {
+                board::Piece::O => 100_000_000,
+                board::Piece::X => 100_000_000,
+                board::Piece::Empty => 0,
+            };
+        }
 
         let (diagonals_up, diagonals_down) = board.diagonals();
         let cols = board.cols();

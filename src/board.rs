@@ -12,6 +12,16 @@ pub enum Piece {
     Empty,
 }
 
+impl Piece {
+    pub fn opponent(&self) -> Piece {
+        match self {
+            Piece::O => Piece::X,
+            Piece::X => Piece::O,
+            Piece::Empty => Piece::Empty,
+        }
+    }
+}
+
 impl Default for Board {
     fn default() -> Self {
         Self::new()
@@ -113,6 +123,66 @@ impl Board {
         }
 
         None
+    }
+
+
+    pub fn creates_three_in_a_row(&mut self, col: usize,  piece: Piece) -> bool {
+        self.insert_piece(col, piece).ok();
+
+        // Check the column for four in a row
+        for window in self.cols[self.last_move].windows(4) {
+            if window.iter().filter(|&&x| x == piece ).count() == 3 && window.iter().filter(|&&x| x == Piece::Empty).count() == 1 {
+                self.undo_move(col);
+                return true
+            }
+        }
+
+        // Find the x and y of the last piece inserted
+        let mut last_piece_y = 5;
+        while self.cols[self.last_move][last_piece_y] == Piece::Empty && last_piece_y != 0 {
+            last_piece_y = last_piece_y.saturating_sub(1);
+        }
+        let last_piece_x = self.last_move;
+
+        // Get the three pieces on each side of the last piece inserted
+        let mut row: Vec<Piece> = Vec::new();
+
+        let first: usize = last_piece_x.saturating_sub(3);
+        let last = (last_piece_x + 3).min(self.cols.len() - 1);
+
+        for x in first..=last {
+            row.push(self.cols[x][last_piece_y]);
+        }
+
+        for window in row.windows(4) {
+            if window.iter().filter(|&&x| x == piece ).count() == 3 && window.iter().filter(|&&x| x == Piece::Empty).count() == 1 {
+                self.undo_move(col);
+                return true
+            }
+        }
+
+        let (diagonal1, diagonal2) = self.get_diagonals_of_last_piece(last_piece_x, last_piece_y);
+
+        if diagonal1.len() >= 4 {
+            for window in diagonal1.windows(4) {
+                if window.iter().filter(|&&x| x == piece ).count() == 3 && window.iter().filter(|&&x| x == Piece::Empty).count() == 1 {
+                    self.undo_move(col);
+                    return true
+                }
+            }
+        }
+        if diagonal2.len() >= 4 {
+            for window in diagonal2.windows(4) {
+                if window.iter().filter(|&&x| x == piece ).count() == 3 && window.iter().filter(|&&x| x == Piece::Empty).count() == 1 {
+                    self.undo_move(col);
+                    return true
+                }
+            }
+        }
+
+        self.undo_move(col);
+
+        false
     }
 
     pub fn is_terminal(&self) -> Option<Piece> {
@@ -278,6 +348,18 @@ impl Board {
             }
         }
         true
+    }
+
+    pub fn get_moves(&self) -> Vec<usize> {
+        let mut empty_cols = Vec::new();
+        let cols = self.cols();
+        for i in 0..cols.len() {
+            if cols[i].contains(&Piece::Empty) {
+                empty_cols.push(i);
+            };
+        }
+
+        empty_cols
     }
 }
 
